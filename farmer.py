@@ -16,6 +16,7 @@ from typing import List, Dict
 import base64
 from pprint import pprint
 import logger
+import notify
 import utils
 from utils import plat
 from settings import user_param
@@ -105,6 +106,8 @@ class Farmer:
         options.add_argument("--disable-extensions")
         options.add_argument("--log-level=3")
         options.add_argument("--disable-logging")
+        options.add_experimental_option('useAutomationExtension', False)
+        options.add_experimental_option('excludeSwitches', ['enable-automation'])
         data_dir = os.path.join(Farmer.chrome_data_dir, self.wax_account)
         options.add_argument("--user-data-dir={0}".format(data_dir))
         if self.proxy:
@@ -112,6 +115,7 @@ class Farmer:
         self.driver = webdriver.Chrome(plat.driver_path, options=options)
         self.driver.implicitly_wait(60)
         self.driver.set_script_timeout(60)
+        self.driver.set_window_size(1200, 750)
         self.http = requests.Session()
         self.http.trust_env = False
         self.http.request = functools.partial(self.http.request, timeout=30)
@@ -1133,6 +1137,9 @@ class Farmer:
             if not e.retry:
                 return Status.Stop
             self.count_error_transact += 1
+            if self.count_error_transact == 10:
+                self.log.info("发送通知邮件")
+                notify.send_email("OpenFarmer", "合约调用异常【{0}】次".format(self.count_error_transact))
             self.log.error("合约调用异常【{0}】次".format(self.count_error_transact))
             if self.count_error_transact >= e.max_retry_times and e.max_retry_times != -1:
                 self.log.error("合约连续调用异常")
