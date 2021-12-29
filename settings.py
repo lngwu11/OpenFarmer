@@ -30,12 +30,15 @@ class user_param:
     cow: bool = True
     mbs: bool = True
     withdraw: bool = True
+    auto_deposit: bool = True
     sell_corn: bool = True
     sell_barley: bool = True
     sell_milk: bool = True
     sell_egg: bool = True
+    auto_plant: bool = True
     # 能量不够的时候，就去恢复那么多能量,但不超过最大能量
     recover_energy: int = 500
+    min_energy: int = 50
 
     on_server: bool = False
 
@@ -50,6 +53,18 @@ class user_param:
     remaining_barley_num: int = 0
     remaining_milk_num: int = 0
     remaining_egg_num: int = 0
+
+    barleyseed_num: int = 0
+    cornseed_num: int = 0
+
+    fww_min: int = 0
+    deposit_fww: int = 0
+    fwf_min: int = 0
+    deposit_fwf: int = 0
+    fwg_min: int = 0
+    deposit_fwg: int = 0
+
+    min_durability: int = 0
 
 
 def load_user_param(user: dict):
@@ -66,8 +81,12 @@ def load_user_param(user: dict):
     user_param.sell_barley = user.get("sell_barley", True)
     user_param.sell_milk = user.get("sell_milk", True)
     user_param.sell_egg = user.get("sell_egg", True)
+    user_param.auto_plant = user.get("auto_plant", True)
     user_param.recover_energy = user.get("recover_energy", 500)
+    user_param.min_energy = user.get("min_energy", 50)
+    user_param.min_durability = user.get("min_durability", 0)
     user_param.withdraw = user.get("withdraw", True)
+    user_param.auto_deposit = user.get("auto_deposit", True)
     user_param.need_fww = user.get("need_fww", 200)
     user_param.need_fwf = user.get("need_fwf", 200)
     user_param.need_fwg = user.get("need_fwg", 200)
@@ -76,6 +95,16 @@ def load_user_param(user: dict):
     user_param.remaining_barley_num = user.get("remaining_barley_num", 0)
     user_param.remaining_milk_num = user.get("remaining_milk_num", 0)
     user_param.remaining_egg_num = user.get("remaining_egg_num", 0)
+
+    user_param.barleyseed_num = user.get("barleyseed_num", 0)
+    user_param.cornseed_num = user.get("cornseed_num", 0)
+
+    user_param.fww_min = user.get("fww_min", 0)
+    user_param.deposit_fww = user.get("deposit_fww", 0)
+    user_param.fwf_min = user.get("fwf_min", 0)
+    user_param.deposit_fwf = user.get("deposit_fwf", 0)
+    user_param.fwg_min = user.get("fwg_min", 0)
+    user_param.deposit_fwg = user.get("deposit_fwg", 0)
 
 
 cfg = Settings(

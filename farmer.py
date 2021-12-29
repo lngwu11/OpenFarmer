@@ -63,7 +63,7 @@ class Farmer:
     url_rpc = "https://wax.dapplica.io/v1/chain/"
     url_table_row = url_rpc + "get_table_rows"
     # 资产API
-    #url_assets = "https://wax.api.atomicassets.io/atomicassets/v1/assets"
+    # url_assets = "https://wax.api.atomicassets.io/atomicassets/v1/assets"
     url_assets = "https://atomic.wax.eosrio.io/atomicassets/v1/assets"
     waxjs: str = None
     myjs: str = None
@@ -337,6 +337,7 @@ class Farmer:
             build.next_availability = datetime.fromtimestamp(item["next_availability"])
             build.template_id = item["template_id"]
             build.times_claimed = item.get("times_claimed", None)
+            build.slots_used = item.get("slots_used", None)
             if build.is_ready == 1:
                 continue
             buildings.append(build)
@@ -502,7 +503,7 @@ class Farmer:
             asset.schema_name = item["schema"]["schema_name"]
             asset.template_id = item["template"]["template_id"]
             asset_list.append(asset)
-        self.log.info("[{0}]_get_asset_list: [{1}]".format(name, format(asset_list)))
+        self.log.debug("[{0}]_get_asset_list: [{1}]".format(name, format(asset_list)))
         return asset_list
 
     # 获取动物的信息
@@ -525,7 +526,7 @@ class Farmer:
                     # 鸡舍
                     animals.append(anim)
                 # else:
-                    # self.log.warning("自动喂养未开启:{0}".format(item))
+                # self.log.warning("自动喂养未开启:{0}".format(item))
             else:
                 self.log.warning("尚未支持的动物:{0}".format(item))
         return animals
@@ -711,6 +712,76 @@ class Farmer:
         self.claim_buildings(buildings)
         return True
 
+    def scan_plants(self):
+        self.log.info("自动种地")
+        post_data = self.table_row_template()
+        post_data["table"] = "buildings"
+        post_data["index_position"] = 2
+
+        resp = self.http.post(self.url_table_row, json=post_data)
+        self.log.debug("get_buildings_info:{0}".format(resp.text))
+        resp = resp.json()
+        for item in resp["rows"]:
+            if item["template_id"] == 298592:
+                slots_num = 8 - item["slots_used"]
+                if slots_num > 0:
+                    self.plant_corps(slots_num)
+                else:
+                    self.log.info("没有未使用的地块")
+        return True
+
+    # 种植
+    def plant_corps(self, slots_num):
+        self.log.info("获取大麦或玉米种子")
+        if user_param.barleyseed_num > 0:
+            barleyseed_list = self.get_asset(298595, 'Barley Seed')
+            plant_times = min(slots_num, user_param.barleyseed_num)
+            if len(barleyseed_list) < plant_times:
+                self.log.warning("大麦种子数量不足,请及时补充")
+                return False
+            for i in range(plant_times):
+                asset = barleyseed_list.pop()
+                self.wear_assets([asset.asset_id])
+        else:
+            self.log.info("设置的大麦种子数量为0")
+
+        if user_param.cornseed_num > 0:
+            cornseed_list = self.get_asset(298596, 'Corn Seed')
+            plant_times2 = min(slots_num, user_param.cornseed_num)
+            if len(cornseed_list) < plant_times2:
+                self.log.warning("玉米种子数量不足,请及时补充")
+                return False
+            for i in range(plant_times2):
+                asset = cornseed_list.pop()
+                self.wear_assets([asset.asset_id])
+        else:
+            self.log.info("设置的玉米种子数量为0")
+
+        return True
+
+    # 穿戴工具，种地-（种地：玉米、小麦）
+    def wear_assets(self, asset_ids):
+        self.log.info("正在种地【玉米种子|小麦种子】")
+        transaction = {
+            "actions": [{
+                "account": "atomicassets",
+                "name": "transfer",
+                "authorization": [{
+                    "actor": self.wax_account,
+                    "permission": "active",
+                }],
+                "data": {
+                    "from": self.wax_account,
+                    "to": "farmersworld",
+                    "asset_ids": asset_ids,
+                    "memo": "stake",
+                },
+            }],
+        }
+        self.wax_transact(transaction)
+        self.log.info("种地完成")
+        time.sleep(cfg.req_interval)
+
     def scan_crops(self):
         self.log.info("检查农田")
         crops = self.get_crops()
@@ -886,6 +957,73 @@ class Farmer:
         self.claim_mining(tools)
         return True
 
+    # 充值
+    def scan_deposit(self):
+        self.log.info("检查是否需要充值")
+        r = self.resoure
+
+        deposit_wood = 0
+        deposit_food = 0
+        deposit_gold = 0
+
+        if r.wood <= user_param.fww_min:
+            deposit_wood = user_param.deposit_fww
+            if self.token.fww < deposit_wood:
+                self.log.info(f"fww不足，请先购买{deposit_wood}个fww代币")
+                return False
+        if r.gold <= user_param.fwg_min:
+            deposit_gold = user_param.deposit_fwg
+            if self.token.fwg < deposit_gold:
+                self.log.info(f"fwg不足，请先购买{deposit_gold}个fwg代币")
+                return False
+        if r.food <= user_param.fwf_min:
+            deposit_food = user_param.deposit_fwf
+            if self.token.fwf < deposit_food:
+                self.log.info(f"fwf不足，请先购买{deposit_food}个fwf代币")
+                return False
+        if deposit_wood + deposit_food + deposit_gold == 0:
+            self.log.info("无需充值")
+        else:
+            self.do_deposit(deposit_food, deposit_gold, deposit_wood)
+            self.log.info(f"充值：金币【{deposit_gold}】 木头【{deposit_wood}】 食物【{deposit_food}】 ")
+
+        return True
+
+    # 充值
+    def do_deposit(self, food, gold, wood):
+        self.log.info("正在充值")
+        # format(1.23456, '.4f')
+        quantities = []
+        if food > 0:
+            food = format(food, '.4f')
+            quantities.append(food + " FWF")
+        if gold > 0:
+            gold = format(gold, '.4f')
+            quantities.append(gold + " FWG")
+        if wood > 0:
+            wood = format(wood, '.4f')
+            quantities.append(wood + " FWW")
+        # quantities格式：1.0000 FWW
+        transaction = {
+            "actions": [{
+                "account": "farmerstoken",
+                "name": "transfers",
+                "authorization": [{
+                    "actor": self.wax_account,
+                    "permission": "active",
+                }],
+                "data": {
+                    "from": self.wax_account,
+                    "to": "farmersworld",
+                    "quantities": quantities,
+                    "memo": "deposit",
+                },
+            }],
+        }
+        self.wax_transact(transaction)
+        self.log.info("充值完成")
+
+
     # 提现
     def do_withdraw(self, food, gold, wood, fee):
         self.log.info("正在提现")
@@ -970,7 +1108,7 @@ class Farmer:
     # 消耗能量 （操作前模拟计算）
     def consume_energy(self, real_consume: Decimal, fake_consume: Decimal = Decimal(0)):
         consume = real_consume + fake_consume
-        if self.resoure.energy - consume > 0:
+        if self.resoure.energy - consume > user_param.min_energy:
             self.resoure.energy -= real_consume
             return True
         else:
@@ -984,7 +1122,10 @@ class Farmer:
 
     # 消耗耐久度 （操作前模拟计算）
     def consume_durability(self, tool: Tool):
-        if tool.current_durability >= tool.durability_consumed:
+        if tool.current_durability / tool.durability < (user_param.min_durability / 100):
+            self.log.info(f"工具耐久不足{user_param.min_durability}%")
+            self.repair_tool(tool)
+        elif tool.current_durability >= tool.durability_consumed:
             return True
         else:
             self.log.info("工具耐久不足")
@@ -1048,13 +1189,13 @@ class Farmer:
 
     def scan_withdraw(self):
         self.log.info("检查是否可以提现")
-        r = self.get_resource()
+        r = self.resoure
         # 获取提现费率
         withdraw_wood = 0
         withdraw_food = 0
         withdraw_gold = 0
         config = self.get_farming_config()
-        withdraw_fee = config["fee"];
+        withdraw_fee = config["fee"]
         self.log.info(f"提现费率：{withdraw_fee}% ")
 
         if withdraw_fee == 5:
@@ -1073,6 +1214,7 @@ class Farmer:
             self.log.info("不满足提现条件")
 
         return True
+
 
     def scan_resource(self):
         r = self.get_resource()
@@ -1111,12 +1253,18 @@ class Farmer:
             if user_param.withdraw:
                 self.scan_withdraw()
                 time.sleep(cfg.req_interval)
+            if user_param.auto_deposit:
+                self.scan_deposit()
+                time.sleep(cfg.req_interval)
             if user_param.sell_corn or user_param.sell_barley or user_param.sell_milk or user_param.sell_egg:
                 # 卖玉米和大麦和牛奶
                 self.scan_nft_assets()
                 time.sleep(cfg.req_interval)
             if user_param.build:
                 self.scan_buildings()
+                time.sleep(cfg.req_interval)
+            if user_param.auto_plant:
+                self.scan_plants()
                 time.sleep(cfg.req_interval)
             self.log.info("结束一轮扫描")
             if self.not_operational:
