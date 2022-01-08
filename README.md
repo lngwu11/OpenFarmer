@@ -3,7 +3,14 @@
 >该脚本基于https://github.com/encoderlee/OpenFarmer 开发，在他的功能基础上增加了一些功能，感谢这位大佬无私奉献。
 
 ### 一个免费、开源的农民世界 FarmersWorld 挂机脚本
-![image](https://raw.githubusercontent.com/encoderlee/OpenFarmer/main/doc/demo1.png)
+
+可视化界面图例：
+
+![image](https://static.umaske.com/20211231114315.png)
+
+命令行界面图例：
+
+![image](https://static.umaske.com/20211231114612.png)
 ### 初衷
 
 农民世界 https://farmersworld.io 的火热相信大家已经有目共睹
@@ -42,8 +49,15 @@
 12. 支持食物、金子不足自动充值
 13. 支持5%费率的时候自动提现
 
-### 用法
-1. git clone 源码到本地，或 Download ZIP 下载源码到本地
+### 用法一
+
+嫌麻烦的同学可以直接在github页面右侧的【Releases】处下载最新的打包版本，该版本只支持windows 64位系统，建议在win10系统上运行，把压缩包里的目录解压出来，双击运行【gui.exe】即可，命令行版本可运行【main.exe】，使用命令行版本前需手工修改配置文件【user.yml】
+
+对安全性有要求，喜欢捣鼓代码的，建议从源码运行，根据下面的步骤一步步来
+
+### 用法二
+
+1. 点击当前页面的【Code】=> git clone 源码到本地，或 Download ZIP 下载源码到本地
 2. 下载安装python3 (版本须大于等于python3.7)
    
    请到python官网下载最新版本：
@@ -52,8 +66,9 @@
    【注意】安装时请记得勾选【Add Python 3.10 to PATH】
 3. 双击运行 【install_depends.py】 来安装依赖包，一台电脑只需要安装一次即可
    【注意】安装依赖包前请关闭翻墙代理，关闭科学上网，不然无法从豆瓣pypi镜像站下载依赖包
-4. 安装Chrome浏览器，并升级到最新版
+4. 安装Chrome浏览器，并升级到最新版（用当前版本也行，确保和ChromeDriver版本一致）
 5. 下载ChromeDriver，版本确保和Chrome版本一致
+
 https://chromedriver.chromium.org/downloads
 
     比如我的Chrome版本是 96.0.4664.45
@@ -64,14 +79,14 @@ https://chromedriver.chromium.org/downloads
    
    windows系统的话下载【chromedriver_win32.zip】
 6. 将下载的 ChromeDriver 压缩包中的 chromedriver.exe 文件，解压到本项目的源码目录中（和 main.py 在一个目录中）
-7. 修改配置文件【user.yaml】 
-   1. 复制user.yaml.example 到 user.yaml
+7. 修改配置文件【user.yml】 
+   1. 复制一份 user.yml.example 文件，改名为 user.yml
    2. 按照你的实际情况设置各个参数
    3. wax_account: (wax账号，也就是wax钱包地址,以.wam结尾)
    4. proxy: (可设置http代理，格式为127.0.0.1:10809，不需要代理的话设置为null)
-   5. 下面的（build、mining、animal、plant、mbs)分别对应建造、采集资源、养鸡、种地、养牛、会员点击，需要程序自动化的操作，设置为true，不需要程序自动化的操作，设置为false，比如你只种地的话，plant: true 即可，其它全部为false，这样减少不必要的网络操作，提高运行效率 
+   5. 下面的（build、mining、chicken、cow、plant、mbs)分别对应建造、采集资源、养鸡、养牛、种地、会员点击，需要程序自动化的操作，设置为true，不需要程序自动化的操作，设置为false，比如你只种地的话，plant: true 即可，其它全部为false，这样减少不必要的网络操作，提高运行效率 
    6. recover_energy: 500 (能量不够时恢复到多少能量，默认500，请准备足够的肉，程序不会自动去买肉)
-   7. 建造、采集资源、养动物、种地、会员点击，需要程序自动化的操作，设置为true
+   7. 建造、采集资源、养鸡、养牛、种地、会员点击，需要程序自动化的操作，设置为true
    8. 其他参数按照你的实际情况设置
    
 8. 修改完配置文件后，双击 【main.py】 运行脚本，程序如果异常退出，可以到 logs 文件夹下查看日志
@@ -80,6 +95,22 @@ https://chromedriver.chromium.org/downloads
 11. 注意，一个账号第一次运行脚本，脚本第一次自动收割农作物的时候，Chrome浏览器中可能会弹出WAX钱包授权窗口，并停在那里不动了，这个时候需要勾选自动确认交易，并同意交易，这样脚本以后就能自动处理了，其实和人工操作是一样的，第一次收割的时候，也要点自动同意交易，否则每次都要弹出授权窗口来，脚本只负责收割农作物，不处理授权的事情，是否自动授权取决于用户账号设置
 12. 脚本多开，请把整个源码目录复制一份，在另一个目录中修改配置文件【user.yaml】为另一个账号，双击运行 【main.py】 启动第二个脚本，以此类推，多开互不干扰
 13. 正确关闭程序，请点击脚本控制台窗口右上角的X，稍等几秒钟便会关闭，或者点击脚本控制台窗口后，按Ctrl+C，尽量不要直接关闭脚本控制的Chrome窗口，否则webdriver容易产生一些僵尸进程
+
+### 命令行运行脚本
+
+>前提是完成上面的步骤，安装好python环境，安装好依赖
+
+打开命令行工具（建议下载cmder命令行工具，下载链接：[https://github.com/cmderdev/cmder/releases/download/v1.3.18/cmder_mini.zip](https://github.com/cmderdev/cmder/releases/download/v1.3.18/cmder_mini.zip)）
+
+进入项目目录（假设项目放在D盘的OpenFarmer目录）
+
+1、在命令行工具输入  D: 【按回车】
+
+2、cd D:/OpenFarmer 【按回车】
+
+（如果未安装依赖，可以先执行 python install_depends.py ）
+
+3、python main.py 【按回车】（有些环境是py main.py）
 
 ### 常见问题
 1.程序日志显示，已经成功喂鸡，成功浇水，成功采集了，为什么Chrome中的游戏界面上还是显示没有喂鸡，没有浇水，没有采集？
@@ -102,3 +133,8 @@ TRC20地址: TXmvTZ3ndHpvJU7SYmuLdLBufWdxA34Qix
 WAX地址：4lrzu.wam（支持WAX、FWW、FWF、FWG）
 
 ### 感谢!
+
+### 教程
+
+> 农民世界中文教程：[https://fww.umaske.com](https://fww.umaske.com)
+> 农民世界实时监控中文版：[https://fw.umaske.com](https://fw.umaske.com)
