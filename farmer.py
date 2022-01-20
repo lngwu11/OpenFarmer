@@ -60,16 +60,20 @@ class Status:
 class Farmer:
     # wax rpc
     # url_rpc = "https://api.wax.alohaeos.com/v1/chain/"
-    url_rpc = "https://wax.dapplica.io/v1/chain/"
-    url_table_row = url_rpc + "get_table_rows"
+    # url_rpc = "https://wax.dapplica.io/v1/chain/"
+    # url_table_row = url_rpc + "get_table_rows"
     # 资产API
     # url_assets = "https://wax.api.atomicassets.io/atomicassets/v1/assets"
-    url_assets = "https://atomic.wax.eosrio.io/atomicassets/v1/assets"
+    # url_assets = "https://atomic.wax.eosrio.io/atomicassets/v1/assets"
     waxjs: str = None
     myjs: str = None
     chrome_data_dir = os.path.abspath(cfg.chrome_data_dir)
 
     def __init__(self):
+        self.url_rpc: str = None
+        self.url_table_row: str = None
+        self.url_assets: str = None
+
         self.wax_account: str = None
         self.login_name: str = None
         self.password: str = None
@@ -100,6 +104,10 @@ class Farmer:
             self.driver.quit()
 
     def init(self):
+        self.url_rpc = user_param.rpc_domain + '/v1/chain/'
+        self.url_table_row = user_param.rpc_domain + '/v1/chain/get_table_rows'
+        self.url_assets = user_param.assets_domain + '/atomicassets/v1/assets'
+
         self.log.extra["tag"] = self.wax_account
         options = webdriver.ChromeOptions()
         # options.add_argument("--headless")
@@ -143,7 +151,8 @@ class Farmer:
                 Farmer.waxjs = base64.b64encode(Farmer.waxjs.encode()).decode()
         if not Farmer.myjs:
             with open("inject.js", "r") as file:
-                Farmer.myjs = file.read()
+                inject_rpc = "window.mywax = new waxjs.WaxJS({rpcEndpoint: '"+user_param.rpc_domain+"'});"
+                Farmer.myjs = inject_rpc + file.read()
                 file.close()
 
         code = "var s = document.createElement('script');"
@@ -156,6 +165,8 @@ class Farmer:
 
     def start(self):
         self.log.info("启动浏览器")
+        self.log.info("wax节点: {0}".format(user_param.rpc_domain))
+        self.log.info("原子市场节点: {0}".format(user_param.assets_domain))
         if self.cookies:
             self.log.info("使用预设的cookie自动登录")
             cookies = self.cookies["cookies"]
@@ -304,6 +315,8 @@ class Farmer:
         resp = self.http.post(self.url_table_row, json=post_data)
         self.log.debug("get_table_rows:{0}".format(resp.text))
         resp = resp.json()
+        if len(resp["rows"]) == 0:
+            self.log.info("获取不到账号数据，请检查账号名是否有误")
         resource = Resoure()
         resource.energy = Decimal(resp["rows"][0]["energy"])
         resource.max_energy = Decimal(resp["rows"][0]["max_energy"])
@@ -812,7 +825,7 @@ class Farmer:
             self.log.info("开始购买玉米,数量：{0}".format(buy_num))
             self.market_buy(template_id, buy_num)
         else:
-            self.log.info("不支持购买，请检查配置")
+            self.log.info("配置不执行购买，请检查")
 
         return True
 
@@ -845,7 +858,7 @@ class Farmer:
         if user_param.barleyseed_num > 0:
             barleyseed_list = self.get_asset(298595, 'Barley Seed')
             plant_times = min(slots_num, user_param.barleyseed_num)
-            if len(barleyseed_list) < plant_times:
+            if len(barleyseed_list) < plant_times and user_param.buy_barley_seed:
                 self.log.warning("大麦种子数量不足,开始市场购买")
                 buy_barleyseed_num = plant_times - len(barleyseed_list)
                 rs = self.buy_corps(298595, buy_barleyseed_num)
@@ -853,26 +866,32 @@ class Farmer:
                     return False
                 else:
                     barleyseed_list = self.get_asset(298595, 'Barley Seed')
-            for i in range(plant_times):
-                asset = barleyseed_list.pop()
-                self.wear_assets([asset.asset_id])
+            if len(barleyseed_list) > 0:
+                for i in range(plant_times):
+                    asset = barleyseed_list.pop()
+                    self.wear_assets([asset.asset_id])
+            else:
+                self.log.info("大麦种子数量不足，请及时补充")
         else:
             self.log.info("设置的大麦种子数量为0")
 
         if user_param.cornseed_num > 0:
             cornseed_list = self.get_asset(298596, 'Corn Seed')
             plant_times2 = min(slots_num, user_param.cornseed_num)
-            if len(cornseed_list) < plant_times2:
-                self.log.warning("玉米种子数量不足,请及时补充")
+            if len(cornseed_list) < plant_times2 and user_param.buy_corn_seed:
+                self.log.warning("玉米种子数量不足,开始市场购买")
                 buy_cornseed_num = plant_times2 - len(cornseed_list)
                 rs = self.buy_corps(298596, buy_cornseed_num)
                 if not rs:
                     return False
                 else:
                     cornseed_list = self.get_asset(298596, 'Corn Seed')
-            for i in range(plant_times2):
-                asset = cornseed_list.pop()
-                self.wear_assets([asset.asset_id])
+            if len(cornseed_list) > 0:
+                for i in range(plant_times2):
+                    asset = cornseed_list.pop()
+                    self.wear_assets([asset.asset_id])
+            else:
+                self.log.info("玉米种子数量不足，请及时补充")
         else:
             self.log.info("设置的玉米种子数量为0")
 
@@ -1072,10 +1091,10 @@ class Farmer:
                     },
                 }],
             }
-            result = self.wax_transact(transaction)
-            ming_resource = result["processed"]["action_traces"][0]["inline_traces"][1]["act"]["data"]["rewards"]
-            self.log.info("采矿成功: {0},{1}".format(item.show(more=False), ming_resource))
-            # self.log.info("采矿成功: {0}".format(item.show(more=False)))
+            self.wax_transact(transaction)
+            # ming_resource = result["processed"]["action_traces"][0]["inline_traces"][1]["act"]["data"]["rewards"]
+            # self.log.info("采矿成功: {0},{1}".format(item.show(more=False), ming_resource))
+            self.log.info("采矿成功: {0}".format(item.show(more=False)))
             time.sleep(cfg.req_interval)
 
     def scan_mining(self):
@@ -1223,8 +1242,12 @@ class Farmer:
         self.log.info("正在恢复能量: 【{0}】点 ".format(count))
         need_food = count // Decimal(5)
         if need_food > self.resoure.food:
-            self.log.error(f"食物不足，仅剩【{self.resoure.food}】，兑换能量【{count}】点需要【{need_food}】个食物，请手工处理")
-            raise FarmerException("没有足够的食物，请补充食物，稍后程序自动重试")
+            if self.resoure.food == 0:
+                self.log.error(f"食物不足，仅剩【{self.resoure.food}】，兑换能量【{count}】点需要【{need_food}】个食物，请手工处理")
+                raise FarmerException("没有足够的食物，请补充食物，稍后程序自动重试")
+            else:
+                count = self.resoure.food * Decimal(5)
+                self.log.error(f"食物不足，仅剩【{self.resoure.food}】，只能补充【{count}】点能量")
 
         transaction = {
             "actions": [{
@@ -1245,12 +1268,12 @@ class Farmer:
     # 消耗能量 （操作前模拟计算）
     def consume_energy(self, real_consume: Decimal, fake_consume: Decimal = Decimal(0)):
         consume = real_consume + fake_consume
-        if self.resoure.energy - consume > user_param.min_energy:
+        if self.resoure.energy - consume >= 0:
             self.resoure.energy -= real_consume
             return True
         else:
             self.log.info("能量不足")
-            recover = min(user_param.recover_energy, self.resoure.max_energy - self.resoure.energy)
+            recover = min(user_param.recover_energy, self.resoure.max_energy) - self.resoure.energy
             recover = (recover // Decimal(5)) * Decimal(5)
             self.recover_energy(recover)
             self.resoure.energy += recover
@@ -1356,6 +1379,13 @@ class Farmer:
         r = self.get_resource()
         self.log.info(f"金币【{r.gold}】 木头【{r.wood}】 食物【{r.food}】 能量【{r.energy}/{r.max_energy}】")
         self.resoure = r
+        if self.resoure.energy <= user_param.min_energy:
+            self.log.info("能量小于配置的最小能量，开启能量补充{0}".format(self.resoure.max_energy))
+            recover = min(user_param.recover_energy, self.resoure.max_energy) - self.resoure.energy
+            recover = (recover // Decimal(5)) * Decimal(5)
+            self.recover_energy(recover)
+            self.resoure.energy += recover
+
         time.sleep(cfg.req_interval)
         self.token = self.get_fw_balance()
         self.log.info(f"FWG【{self.token.fwg}】 FWW【{self.token.fww}】 FWF【{self.token.fwf}】")

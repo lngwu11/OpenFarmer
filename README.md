@@ -6,7 +6,7 @@
 
 可视化界面图例：
 
-![image](https://static.umaske.com/20211231114315.png)
+![image](https://static.umaske.com/121212_20220114141141.png)
 
 命令行界面图例：
 
@@ -71,17 +71,17 @@
 
 https://chromedriver.chromium.org/downloads
 
-    比如我的Chrome版本是 96.0.4664.45
+    比如我的Chrome版本是 97.0.4664.45
 
-    那么我就下载 ChromeDriver 96.0.4664.45
+    那么我就下载 ChromeDriver 97.0.4664.45
 
-    其实小版本不一致也没关系，大版本号96一致就行
+    其实小版本不一致也没关系，大版本号97一致就行
    
    windows系统的话下载【chromedriver_win32.zip】
 6. 将下载的 ChromeDriver 压缩包中的 chromedriver.exe 文件，解压到本项目的源码目录中（和 main.py 在一个目录中）
 7. 修改配置文件【user.yml】 
    1. 复制一份 user.yml.example 文件，改名为 user.yml
-   2. 按照你的实际情况设置各个参数
+   2. 按照你的实际情况设置各个参数（修改user.yml推荐使用nodepad++编辑器，下载链接：[点击下载nodepad++编辑器](https://github.com/notepad-plus-plus/notepad-plus-plus/releases/download/v8.2/npp.8.2.Installer.x64.exe)）
    3. wax_account: (wax账号，也就是wax钱包地址,以.wam结尾)
    4. proxy: (可设置http代理，格式为127.0.0.1:10809，不需要代理的话设置为null)
    5. 下面的（build、mining、chicken、cow、plant、mbs)分别对应建造、采集资源、养鸡、养牛、种地、会员点击，需要程序自动化的操作，设置为true，不需要程序自动化的操作，设置为false，比如你只种地的话，plant: true 即可，其它全部为false，这样减少不必要的网络操作，提高运行效率 
@@ -96,11 +96,14 @@ https://chromedriver.chromium.org/downloads
 12. 脚本多开，请把整个源码目录复制一份，在另一个目录中修改配置文件【user.yaml】为另一个账号，双击运行 【main.py】 启动第二个脚本，以此类推，多开互不干扰
 13. 正确关闭程序，请点击脚本控制台窗口右上角的X，稍等几秒钟便会关闭，或者点击脚本控制台窗口后，按Ctrl+C，尽量不要直接关闭脚本控制的Chrome窗口，否则webdriver容易产生一些僵尸进程
 
+
+> ！！！如果因为环境问题双击打不开python文件，可以使用命令行
+
 ### 命令行运行脚本
 
 >前提是完成上面的步骤，安装好python环境，安装好依赖
 
-打开命令行工具（建议下载cmder命令行工具，下载链接：[https://github.com/cmderdev/cmder/releases/download/v1.3.18/cmder_mini.zip](https://github.com/cmderdev/cmder/releases/download/v1.3.18/cmder_mini.zip)）
+打开命令行工具（建议下载cmder命令行工具，下载链接：[点击下载cmder命令行工具](https://github.com/cmderdev/cmder/releases/download/v1.3.18/cmder_mini.zip)）
 
 进入项目目录（假设项目放在D盘的OpenFarmer目录）
 
@@ -130,11 +133,17 @@ https://chromedriver.chromium.org/downloads
 
 TRC20地址: TXmvTZ3ndHpvJU7SYmuLdLBufWdxA34Qix
 
-WAX地址：4lrzu.wam（支持WAX、FWW、FWF、FWG）
+WAX地址：openfarmercn（这个账号和xxxx.wam一样，支持WAX、FWW、FWF、FWG）
 
 ### 感谢!
 
-### 教程
+
+### 我的其他作品
 
 > 农民世界中文教程：[https://fww.umaske.com](https://fww.umaske.com)
+>
 > 农民世界实时监控中文版：[https://fw.umaske.com](https://fw.umaske.com)
+>
+>【农民世界助手-Anchor钱包版】：[https://github.com/lintan/OpenFarmerOnAnchor](https://github.com/lintan/OpenFarmerOnAnchor)
+
+
